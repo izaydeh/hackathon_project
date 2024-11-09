@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:project_app/data_base.dart';
 import 'package:project_app/pages/sub_pages_books/add_book_dialog.dart';
 import 'package:project_app/pages/sub_pages_books/card_display_page.dart';
 import 'package:project_app/pages/sub_pages_books/show_book_details.dart';
@@ -15,26 +16,55 @@ class UsedBooksPage extends StatefulWidget {
 class _UsedBooksPageState extends State<UsedBooksPage> {
   final List<Map<String, String>> _cards = [];
   List<Map<String, String>> _filteredCards = [];
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  final DatabaseHelper _databaseHelper = DatabaseHelper();
 
   @override
   void initState() {
     super.initState();
-    _filteredCards = _cards;
+    print("initState called in UsedBooksPage"); // Initial debug print
+    _loadSavedBooks(); // Load books from the database on initialization
   }
 
-  void _addCard(
-      String name, String book, String mobile, String faculty, String major) {
+  // Load books from the database
+  Future<void> _loadSavedBooks() async {
+    print("Loading saved books...");
+    final List<Map<String, dynamic>> savedBooks =
+        await _databaseHelper.getAllBooks();
+    print("Saved books retrieved: $savedBooks");
+
     setState(() {
-      _cards.add({
-        'name': name, // Owner name
-        'book': book, // Book title
-        'mobile': mobile, // Owner's mobile number
-        'faculty': faculty, // Owner's faculty
-        'major': major, // Owner's major
-      });
-      _filteredCards = _cards; // Reset the filter when a new book is added
+      _cards.clear();
+      for (var book in savedBooks) {
+        _cards.add({
+          'name': book['name'],
+          'book': book['book'],
+          'mobile': book['mobile'],
+          'faculty': book['faculty'],
+          'major': book['major'],
+        });
+      }
+      _filteredCards = List.from(_cards);
+      print("Cards loaded into _cards: $_cards");
     });
+  }
+
+  // Save a new book to the database and add it to the list
+  Future<void> _addCard(String name, String book, String mobile, String faculty,
+      String major) async {
+    print(
+        "Inserting book into database: $name, $book, $mobile, $faculty, $major");
+
+    await _databaseHelper.insertBook({
+      'name': name,
+      'book': book,
+      'mobile': mobile,
+      'faculty': faculty,
+      'major': major,
+    });
+
+    print("Book inserted. Reloading all books from database...");
+    await _loadSavedBooks(); // Reload to ensure data persistence
   }
 
   void _filterCards(String query) {
@@ -44,6 +74,7 @@ class _UsedBooksPageState extends State<UsedBooksPage> {
               .toLowerCase()
               .contains(query.toLowerCase())) // Search by book title
           .toList();
+      print("Filtered cards: $_filteredCards");
     });
   }
 
@@ -107,11 +138,9 @@ class _UsedBooksPageState extends State<UsedBooksPage> {
             ],
           ),
           const SizedBox(height: 16),
-
           SearchB(
               searchController: _searchController, filterCards: _filterCards),
           const SizedBox(height: 16),
-
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(16.0),

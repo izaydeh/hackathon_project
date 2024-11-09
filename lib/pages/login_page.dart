@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:project_app/data_base.dart';
 import 'package:project_app/pages/home_page.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+// login_page.dart
 
 class LoginPage extends StatefulWidget {
   LoginPage({super.key});
@@ -13,6 +16,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   bool _obscurePassword = true;
+  final DatabaseHelper _dbHelper = DatabaseHelper();
 
   Future<void> _launchURL() async {
     const url = 'https://adresetpw.ju.edu.jo/';
@@ -56,6 +60,36 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  void _login() async {
+    String username = usernameController.text;
+    String password = passwordController.text;
+
+    final user = await _dbHelper.getUser(username);
+    if (user != null && user['password'] == password) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const NavigationPage(),
+        ),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Login Failed"),
+          content: const Text("Incorrect username or password."),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -67,16 +101,12 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo
                 Image.asset("images/JUlogoQs.png", height: 100),
                 const SizedBox(height: 50),
-
-                // Username Field
                 TextFormField(
                   controller: usernameController,
                   decoration: InputDecoration(
                     labelText: 'Username',
-                    labelStyle: const TextStyle(color: Colors.grey),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
@@ -87,14 +117,11 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                // Password Field
                 TextFormField(
                   controller: passwordController,
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    labelStyle: const TextStyle(color: Colors.grey),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
@@ -103,11 +130,9 @@ class _LoginPageState extends State<LoginPage> {
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 16),
                     suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
+                      icon: Icon(_obscurePassword
+                          ? Icons.visibility
+                          : Icons.visibility_off),
                       onPressed: () {
                         setState(() {
                           _obscurePassword = !_obscurePassword;
@@ -117,8 +142,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 10),
-
-                // Forgot Password
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -133,8 +156,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 30),
-
-                // Login Button
                 ClipRRect(
                   borderRadius: BorderRadius.circular(30.0),
                   child: MaterialButton(
@@ -142,13 +163,7 @@ class _LoginPageState extends State<LoginPage> {
                     textColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 40, vertical: 16),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const NavigationPage(),
-                        ),
-                      );
-                    },
+                    onPressed: _login,
                     child: const Text(
                       'Login',
                       style: TextStyle(fontSize: 18),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:project_app/data_base.dart';
 import 'package:project_app/pages/sub_pages_for_trans/add_trans_dialog.dart';
 import 'package:project_app/pages/sub_pages_for_trans/card_display_page.dart';
 import 'package:project_app/pages/sub_pages_for_trans/show_trip_details.dart';
@@ -15,26 +16,50 @@ class TransportPage extends StatefulWidget {
 class _TransportPageState extends State<TransportPage> {
   final List<Map<String, String>> _cards = [];
   List<Map<String, String>> _filteredCards = [];
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  final DatabaseHelper _databaseHelper = DatabaseHelper();
 
   @override
   void initState() {
     super.initState();
-    _filteredCards = _cards; // Initially show all cards
+    _loadSavedTrips(); // Load trips from the database on initialization
   }
 
-  void _addCard(String name, String pickUp, String mobile, String timeToGo,
-      String timeToLeave) {
+  // Load trips from the database
+  Future<void> _loadSavedTrips() async {
+    final List<Map<String, dynamic>> savedTrips =
+        await _databaseHelper.fetchTrips();
     setState(() {
-      _cards.add({
-        'name': name,
-        'pickUp': pickUp,
-        'mobile': mobile,
-        'timeToGo': timeToGo,
-        'timeToLeave': timeToLeave,
-      });
-      _filteredCards = _cards; // Reset the filter when a new card is added
+      _cards.clear();
+      for (var trip in savedTrips) {
+        _cards.add({
+          'name': trip['name'],
+          'pickUp': trip['pickUp'],
+          'mobile': trip['mobile'],
+          'timeToGo': trip['timeToGo'],
+          'timeToLeave': trip['timeToLeave'],
+        });
+      }
+      _filteredCards = List.from(_cards); // Initialize the filtered list
     });
+  }
+
+  // Save a new trip to the database and add it to the list
+  Future<void> _addCard(String name, String pickUp, String mobile,
+      String timeToGo, String timeToLeave) async {
+    print(
+        "Inserting trip into database: $name, $pickUp, $mobile, $timeToGo, $timeToLeave");
+
+    await _databaseHelper.insertTrip({
+      'name': name,
+      'pickUp': pickUp,
+      'mobile': mobile,
+      'timeToGo': timeToGo,
+      'timeToLeave': timeToLeave,
+    });
+
+    print("Trip inserted. Reloading all trips from database...");
+    await _loadSavedTrips(); // Reload to ensure data persistence
   }
 
   void _filterCards(String query) {
@@ -44,6 +69,7 @@ class _TransportPageState extends State<TransportPage> {
               .toLowerCase()
               .contains(query.toLowerCase())) // Search by pick-up point
           .toList();
+      print("Filtered trips: $_filteredCards");
     });
   }
 
@@ -123,7 +149,7 @@ class _TransportPageState extends State<TransportPage> {
               itemBuilder: (context, index) {
                 return TripCard(
                   card: _filteredCards[index],
-                  onTap: () => _showBookDetails(_filteredCards[index]),
+                  onTap: () => _showTripDetails(_filteredCards[index]),
                 );
               },
             ),
@@ -151,7 +177,7 @@ class _TransportPageState extends State<TransportPage> {
     );
   }
 
-  void _showBookDetails(Map<String, String> card) {
+  void _showTripDetails(Map<String, String> card) {
     showDialog(
       context: context,
       builder: (context) => TripDialog(card: card),
